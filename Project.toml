@@ -1,3 +1,8 @@
+name = "BlioSpectroscopy"
+uuid = "6e31318f-3d89-4707-97ff-aaba23e5678c"
+authors = ["David MacMahon <davidm@astro.berkeley.edu>"]
+version = "0.0.1"
+
 [deps]
 BLDistributedDataProducts = "ad0e4739-5cde-4603-b467-e3d9d8469c7f"
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
