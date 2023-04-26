@@ -36,6 +36,10 @@ function hirescoarsepeaks(scan, tsamp::Integer=1; nfpc=2^20, h5dir=geth5root())
     vec.(findmax(dcoarse, dims=1))
 end
 
+function scatterlogks(ks; kwargs...)
+    scatter(log10.(abs.(ks)); color=Int.(sign.(ks)), legend=false, kwargs...)
+end
+
 function hireswf(scan, fchan; cchan=1, nfchan=128, nfpc=2^20, h5dir=geth5root())
     scanz = lpad(scan, 4, '0')
     h5names = glob("*_$(scanz).rawspec.0000.h5", h5dir)
