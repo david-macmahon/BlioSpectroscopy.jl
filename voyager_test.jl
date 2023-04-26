@@ -1,4 +1,5 @@
 using Blio
+using BlioSpectroscopy
 using Glob
 using DataFrames
 using Plots
@@ -11,38 +12,32 @@ using CUDA
 using CUDA.CUFFT
 CUDA.allowscalar(false)
 
-if isdir("/mnt/buf1/voyager/GUPPI")
-    @info "Running on COSMIC/VLA"
-    # For COSMIC/VLA 60045 data, the buf0 data has Voyager on the edge of coarse
-    # channel 16 (and 17 thanks to aliasing).  The buf1 data has voyager near
-    # the center of coarse channel 13 (peak is at fine channel 61586, but center
-    # of peaks is 61585) on cosmic-gpu-2.
-    DIR = "/mnt/buf1/voyager/GUPPI"
-    CUDA.device!(5)
-elseif isdir("/datax/dibas")
-    @info "Running on BL/GBT"
-    # For GBT data BLP33, coarse channel 7:
-    # - Scan 0112: fine channel 330857/2^20, 165430/2^19
-    # - Scan 0116: fine channel 330996/2^20, 165508/2^19
-    # The fine channel index for 2^20 fine channels are for the 0000.h5 product
-    # which have different time resolution and different total time) than the
-    # 2^19 fine channels of the "upchan_extract" with nfpc=2^19 and no time
-    # interation.  This leads to slight offsets between the two.
+# For COSMIC/VLA 60045 data on cosmic-gpu-2:/mnt/buf1/voyager/GUPPI, the buf0
+# data has Voyager on the edge of coarse channel 16 (and 17 thanks to aliasing).
+# The buf1 data has voyager near the center of coarse channel 13 (peak is at
+# fine channel 61586, but center of peaks is 61585) on cosmic-gpu-2.
 
-    # Use glob pattern "BLP??/..." to work with any BLPxx
-    DIR = "/datax/dibas/AGBT22B_999_41/GUPPI"
-else
-    @warn "running on unknown system"
-end
+# For GBT 60055 data on BLP33:/datax/dibas/AGBT22B_999_41/GUPPI, coarse channel
+# 7:
+#   - Scan 0112: fine channel 330857/2^20, 165430/2^19
+#   - Scan 0116: fine channel 330996/2^20, 165508/2^19
+# The fine channel index for 2^20 fine channels are for the 0000.h5 product
+# which have different time resolution and different total time) than the
+# 2^19 fine channels of the "upchan_extract" with nfpc=2^19 and no time
+# integration.  This leads to slight offsets between the two.
+
+@info "Running on $(getsitedesc())"
+DIR = getrawroot()
+CUDA.device!(getcudadev())
 
 """
-    loadrawobs(globpattern, dir=".") -> hdrs::DataFrame, blks::Vector{Array}
+    loadrawobs(globpattern, dir=getrawroot()) -> hdrs::DataFrame, blks::Vector{Array}
 
 Loads all GUPPI RAW files in `dir` that match `globpattern`.  Returns a
 DataFrame with one row per header and a Vector containing mmap'd Arrays for eash
 data block.
 """
-function loadrawobs(globpattern, dir=".")
+function loadrawobs(globpattern, dir=getrawroot())
     files = sort(glob(globpattern, dir))
     hdrblks = GuppiRaw.load.(files, DataFrame)
     hdrs = mapreduce(first, (a,b)->vcat(a, b; cols=:union), hdrblks)
@@ -282,7 +277,7 @@ function guppi_raw_header(h)
     grh
 end
 
-function upchan_extract_guppiraw(globpattern, DIR; cchan, fchan, nfchan=32, sideband=:native)
+function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nfchan=32, sideband=:native)
     #DIR = "/mnt/buf1/voyager/GUPPI"
     #cchan = 13
     #fchan = 61585
