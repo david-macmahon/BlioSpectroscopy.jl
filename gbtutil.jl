@@ -3,7 +3,7 @@ using HDF5, H5Zbitshuffle
 using Plots
 using Glob
 
-function hireswf(scan, fchan, nfchan=128; h5dir=geth5root())
+function hireswf(scan, fchan; cchan=1, nfchan=128, nfpc=2^20, h5dir=geth5root())
     scanz = lpad(scan, 4, '0')
     h5names = glob("*_$(scanz).rawspec.0000.h5", h5dir)
     if isempty(h5names)
@@ -12,6 +12,7 @@ function hireswf(scan, fchan, nfchan=128; h5dir=geth5root())
     end
 
     r = range(-nfchan÷2, length=nfchan)
+    fchan += (cchan-1) * nfpc
 
     h5d, foff = h5open(h5names[1]) do h5
         h5["data"][r.+fchan,1,:], abs(h5["data"]["foff"][]) * 1e6
@@ -21,4 +22,8 @@ function hireswf(scan, fchan, nfchan=128; h5dir=geth5root())
         title="Scan $scanz centered at fine channel $fchan", titlefontsize=12,
         xlabel="Frequency offset [Hz]", ylabel="Time sample"
     )
+end
+
+function hireswf(scan, center::CartesianIndex{2}; nfchan=128, nfpc=2^20, h5dir=geth5root())
+    hireswf(scan, center[1]; cchan=center[2], nfchan, nfpc, h5dir)
 end
