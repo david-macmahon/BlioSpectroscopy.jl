@@ -1,10 +1,11 @@
+using BlioSpectroscopy
 using HDF5, H5Zbitshuffle
 using Plots
 using Glob
 
-function hireswf(scan, fchan, nfchan=128; h5dir="/datax/dibas/AGBT22B_999_42/GUPPI")
+function hireswf(scan, fchan, nfchan=128; h5dir=geth5root())
     scanz = lpad(scan, 4, '0')
-    h5names = glob("BLP??/*_$(scanz).rawspec.0000.h5", h5dir)
+    h5names = glob("*_$(scanz).rawspec.0000.h5", h5dir)
     if isempty(h5names)
         @warn "scan $scanz not found in $h5dir"
         return nothing
