@@ -1,7 +1,40 @@
 using BlioSpectroscopy
 using HDF5, H5Zbitshuffle
+using StatsBase
 using Plots
 using Glob
+
+function hirescoarsekmax(scan, tsamp::Integer=1; nfpc=2^20, h5dir=geth5root())
+    scanz = lpad(scan, 4, '0')
+    h5names = glob("*_$(scanz).rawspec.0000.h5", h5dir)
+    if isempty(h5names)
+        @warn "scan $scanz not found in $h5dir"
+        return nothing
+    end
+    d = h5open(h5names[1]) do h5
+        h5["data"][:,1,tsamp]
+    end
+    dcoarse = reshape(d, nfpc, :)
+    # De-spike
+    dcoarse[nfpc÷2+1,:] = dcoarse[nfpc÷2,:]
+    kurtosis.(eachcol(dcoarse))
+end
+
+function hirescoarsepeaks(scan, tsamp::Integer=1; nfpc=2^20, h5dir=geth5root())
+    scanz = lpad(scan, 4, '0')
+    h5names = glob("*_$(scanz).rawspec.0000.h5", h5dir)
+    if isempty(h5names)
+        @warn "scan $scanz not found in $h5dir"
+        return nothing
+    end
+    d = h5open(h5names[1]) do h5
+        h5["data"][:,1,tsamp]
+    end
+    dcoarse = reshape(d, nfpc, :)
+    # De-spike
+    dcoarse[nfpc÷2+1,:] = dcoarse[nfpc÷2,:]
+    vec.(findmax(dcoarse, dims=1))
+end
 
 function hireswf(scan, fchan; cchan=1, nfchan=128, nfpc=2^20, h5dir=geth5root())
     scanz = lpad(scan, 4, '0')
