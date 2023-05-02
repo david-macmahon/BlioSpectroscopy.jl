@@ -16,6 +16,9 @@ CUDA.allowscalar(false)
 # data has Voyager on the edge of coarse channel 16 (and 17 thanks to aliasing).
 # The buf1 data has voyager near the center of coarse channel 13 (peak is at
 # fine channel 61586, but center of peaks is 61585) on cosmic-gpu-2.
+#
+# For cosmic-gpu-2:/mnt/buf1/voyager/GUPPI data of 60060, the carrier starts
+# at/near fine channel 76137.
 
 # For GBT 60055 data on BLP33:/datax/dibas/AGBT22B_999_41/GUPPI, coarse channel
 # 7:
@@ -30,6 +33,7 @@ CUDA.allowscalar(false)
 DIR = getrawroot()
 CUDA.device!(getcudadev())
 
+#= Now in Blio!
 """
     loadrawobs(globpattern, dir=getrawroot()) -> hdrs::DataFrame, blks::Vector{Array}
 
@@ -44,18 +48,20 @@ function loadrawobs(globpattern, dir=getrawroot())
     blks = mapreduce(last, vcat, hdrblks)
     hdrs, blks
 end
+=#
 
+#=
 """
-    calcfreqs(hdr, nfpc=2^17) -> freqs::Range
+    calc_upchan_freqs(hdr, nfpc=2^17) -> freqs::Range
 
 Returns a Range of frequencies that corrrespond to upchannelizing the GUPPI RAW
 data described by `hdr` by a factor of `nfpc`.  The `hdr` argument can be
 anything that can be indexed by `:obsnchan`, `:nants` (defaults to 1 if not
 present), `:obsfreq`, `:chan_bw`.  Commonly used types for `hdr` would be
-GuppiRaw.Header or DataFrameRow, but `Dict{Symbol,Any}` and `NamedTuple` can be
-used as well.
+`GuppiRaw.Header` or `DataFrameRow`, but `Dict{Symbol,Any}` and `NamedTuple` can
+be used as well.
 """
-function calcfreqs(hdr, nfpc=2^17)
+function calc_upchan_freqs(hdr, nfpc=2^17)
     nants = haskey(hdr, :nants) ? hdr[:nants] : 1
     ncoarse = hdr[:obsnchan] ÷ nants
     fcoarse0 = hdr[:obsfreq] - (ncoarse-1)*hdr[:chan_bw]/2
@@ -64,9 +70,11 @@ function calcfreqs(hdr, nfpc=2^17)
     nfine = nfpc * ncoarse
     range(fch1, step=foff, length=nfine)
 end
+=#
 
+#=
 """
-    calctime(hdr) -> unix_seconds
+    calc_start_time(hdr) -> unix_seconds
 
 Returns the time of the first sample of the GUPPI RAW data block corresponding
 to `hdr` as the number of seconds since the Unix epoch.  The `hdr` argument can
@@ -74,11 +82,14 @@ be anything that can be indexed by `:tbin`, `:piperblk`, `:synctime`, `:pktidx`.
 Commonly used types for `hdr` would be GuppiRaw.Header or DataFrameRow, but
 `Dict{Symbol,Any}` and `NamedTuple` can be used as well.
 """
-function calctime(hdr)
+function calc_start_ime(hdr)
     secperblk=hdr[:tbin]*GuppiRaw.getntime(hdr)
     secperpktidx = secperblk / hdr[:piperblk]
     hdr[:synctime] + hdr[:pktidx] * secperpktidx
 end
+=#
+
+#=
 
 """
     spectroscopy(blks; nint=32)
@@ -146,6 +157,7 @@ function spectroscopy(blks; nint=32)
     # Return pwrints as an Array{Float64}
     convert(Array{Float64}, pwrints)
 end
+=#
 
 """
     getkurtosis(pwr::AbstractArray{<:Real,5})
@@ -158,15 +170,18 @@ function getkurtosis(pwr::AbstractArray{<:Real,5})
     reshape(k, nf, nc, na, np)
 end
 
+#=
 """
-    chanspan(fchan, nfchan) -> chan_range
+    chanspan(chan, nchan) -> chan_range
 
-Return a `Range` of `nfchan` channels centered on `fchan`.
+Return a `Range` of `nchan` channels centered on `chan`.
 """
-function chanspan(fchan, nfchan)
-    (0:nfchan-1) .- nfchan÷2 .+ fchan
+function chanspan(chan, nchan)
+    (0:nchan-1) .- nchan÷2 .+ chan
 end
+=#
 
+#=
 """
     upchan_extract(blks; cchan=16, fchan=124871, nfchan=32)
 
@@ -232,6 +247,7 @@ function upchan_extract(blks; cchan=16, fchan=124871, nfchan=32)
     # Return voutcpu_tfap
     voutcpu_tfap
 end
+=#
 
 function plotspan(qf, pk, antnames; r=45000, foff=10^6/2^17, kwargs...)
     fchan = pk[1]
@@ -266,6 +282,7 @@ function plotspan_linear(qf, pk, antnames; r=45000, foff=10^6/2^17)
     )
 end
 
+#= Now in Blio!
 # This should probably be part of Blio.GuppiRaw
 function guppi_raw_header(h)
     grh = GuppiRaw.Header()
@@ -276,14 +293,21 @@ function guppi_raw_header(h)
     end
     grh
 end
+=#
 
+#=
 function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nfchan=32, sideband=:native)
     #DIR = "/mnt/buf1/voyager/GUPPI"
     #cchan = 13
     #fchan = 61585
 
-    #hdrs, blks = loadrawobs("*60045*.4.1.*.????.raw", DIR)
-    hdrs, blks = loadrawobs(globpattern, DIR)
+    rawnames = glob(globpattern, DIR)
+    if isempty(rawnames)
+        @info "no files matching $globpattern in $DIR"
+        return nothing
+    end
+
+    hdrs, blks = GuppiRaw.load(rawnames, DataFrame)
 
     grh = guppi_raw_header(hdrs[1,:])
     # upchan_extract returns an Array dimensioned: `(time, chan, ant, pol)`
@@ -342,6 +366,7 @@ function write_raw_file(filename, grh, data)
     write(io, data)
     close(io)
 end
+=#
 
 function lo(k,n,N=2^17)::Vector{ComplexF32}
     cispi.((0:n-1) .* (-2f0*k/N))
