@@ -1,19 +1,15 @@
-using Glob: glob
 using Blio: GuppiRaw
-using DataFrames: DataFrame
 using Statistics: std
 
 """
-    upchan_extract_guppiraw(globpattern, DIR; cchan, fchan, nfchan=32, sideband=:native, pbkwargs...) -> (grh, data)
+    upchan_extract_guppiraw(hdr1, blks; cchan, fchan, nfchan=32, sideband=:native) -> (grh, data)
 
-For all files in `DIR` matching `globpattern`, use CUDA to up-channelize coarse
-channel `cchan` of 3- or 4-dimensional GUPPI RAW data blocks along the time
-axis.  For each block, `fftshift` the resulting fine channels, then select
-`nfchan` channels around fine channel `fchan`.  The results from each
-block are treated as single time sample.  Time samples from multiple blocks are
-concatenated (and scaled and quantized) to create an `Array{Complex{Int8}}``
-whose dimensions are permuted to match the GUPPI RAW ordering of dimensions:
-`(npol, ntime, nchan, nant)`, where:
+Uses `upchan_extract` to up-channelize the 3- or 4-dimensional data blocks in
+`blks` and extract fine channels based on `cchan`, `fchan, and `nfchan`.  The
+results from each block are treated as single time sample.  Time samples from
+multiple blocks are concatenated (and scaled and quantized) to create an
+`Array{Complex{Int8}}`` whose dimensions are permuted to match the GUPPI RAW
+ordering of dimensions: `(npol, ntime, nchan, nant)`, where:
 
 - `npol` is the number of polarizations,
 - `ntime` is the number of output time samples (i.e. number of input blocks),
@@ -26,27 +22,13 @@ data array will be flipped around the frequency axis and the relevant fields in
 the returned GuppiRaw.Header object (i.e. `:chan_bw` and `:obsbw`) will be
 updated.
 
-This function returns `nothing` if no files in `DIR` match or a
-`(GuppiRaw::Header, Array{Complex{Int8}})`` tuple if one or more files in `DIR`
-match.
-
-`pbkwargs` are passed through to ProgressBar.  This can useful in notebooks
-where the progress bar may be unwanted (e.g. by passing
-`output_stream=devnull`).
+This function returns `(grh::GuppiRaw.Header, newblockk::Array{Complex{Int8}})`,
+where `grh` is a copy of `hdr1` that has been modified to reflect the data in
+`newblock`.
 """
-function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nfchan=32, sideband=:native, pbkwargs...)
-    # Get the list of RAW file names
-    rawnames = sort(glob(globpattern, DIR))
-    if isempty(rawnames)
-        @info "no files matching $globpattern in $DIR"
-        return nothing
-    end
-
-    hdrs, blks = GuppiRaw.load(rawnames, DataFrame)
-
-    grh = GuppiRaw.Header(hdrs[1,:])
+function upchan_extract_guppiraw(hdr1, blks; cchan, fchan, nfchan=32, sideband=:native)
     # upchan_extract returns an Array dimensioned: `(time, chan, ant, pol)`
-    vv_tcap = upchan_extract(blks; cchan, fchan, nfchan, pbkwargs...)
+    vv_tcap = upchan_extract(blks; cchan, fchan, nfchan)
 
     # Requantize vv from Complex{Float32} to Complex{Int8}
     vvi8_tcap = requantize_to_i8(vv_tcap)
@@ -55,6 +37,7 @@ function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nf
 
     # Gather relevant metadata
     nfpc = size(blks[1], 2)
+    grh = GuppiRaw.Header(hdr1)
     cfreqs = collect(Iterators.partition(calc_upchan_freqs(grh, nfpc), nfpc))
     ffreqs = cfreqs[cchan][chanspan(fchan, nfchan)]
     _, _, nc, na = size(vvi8_ptca)
@@ -79,9 +62,6 @@ function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nf
         grh[:obsbw] *= -1
         reverse!(vvi8_ptca, dims=3)
     end
-
-    # Finalize blks to release mmap'd regions
-    foreach(finalize, blks)
 
     return grh, vvi8_ptca
 end
