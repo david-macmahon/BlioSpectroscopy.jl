@@ -4,7 +4,7 @@ using LinearAlgebra: mul!
 using ProgressBars: ProgressBar
 
 """
-    spectroscopy(blks; nint=32)
+    spectroscopy(blks; nint=32, pbkwargs...)
 
 Uses CUDA to up-channelize GUPPI RAW data blocks stored as 3- or 4-dimensional
 Arrays in iterable `blks` along the time axis, detects (i.e. converts to power),
@@ -21,8 +21,12 @@ antenna per block, `nant` is the number of antennas, `nfine` is the number of
 (fine) frequency channels in the output, and `nint` is the number of output
 integrations.  Note that `nfine == ntime` and `nint` is the time axis of the
 output data.
+
+`pbkwargs` are passed through to ProgressBar.  This can useful in notebooks
+where the progress bar may be unwanted (e.g. by passing
+`output_stream=devnull`).
 """
-function spectroscopy(blks; nint=32)
+function spectroscopy(blks; nint=32, pbkwargs...)
     np = size(blks[1], 1)
     nt = size(blks[1], 2)
     nc = size(blks[1], 3)
@@ -40,7 +44,7 @@ function spectroscopy(blks; nint=32)
 
     # For each block
     toutidx = 1
-    for (b, blk) in ProgressBar(enumerate(blks))
+    for (b, blk) in ProgressBar(enumerate(blks); pbkwargs...)
         # Copy block to gpuint
         copyto!(gpuint, blk)
 

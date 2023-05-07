@@ -4,7 +4,7 @@ using LinearAlgebra: mul!
 using ProgressBars: ProgressBar
 
 """
-    upchan_extract(blks; cchan, fchan, nfchan=32)
+    upchan_extract(blks; cchan, fchan, nfchan=32, pbkwargs...)
 
 Uses CUDA to up-channelize coarse channel `cchan` of 3- or 4-dimensional GUPPI
 RAW data blocks in `blks` along the time axis.  For each block, `fftshift` the
@@ -15,8 +15,12 @@ npol)`, where `ntime` is the number of output time samples (i.e. number of input
 blocks), `nfine` is the number of fine channels (i.e. number of time samples per
 input block), `nant` is the number of antennas, and `npol` is the number of
 polarizations.
+
+`pbkwargs` are passed through to ProgressBar.  This can useful in notebooks
+where the progress bar may be unwanted (e.g. by passing
+`output_stream=devnull`).
 """
-function upchan_extract(blks; cchan, fchan, nfchan=32)
+function upchan_extract(blks; cchan, fchan, nfchan=32, pbkwargs...)
     np = size(blks[1], 1)
     nt = size(blks[1], 2)
     nc = size(blks[1], 3)
@@ -40,7 +44,7 @@ function upchan_extract(blks; cchan, fchan, nfchan=32)
     voutcpu_tfap = Array{ComplexF32}(undef, nb, nfchan, na, np)
 
     # For each block
-    for (b, blk) in ProgressBar(enumerate(blks))
+    for (b, blk) in ProgressBar(enumerate(blks); pbkwargs...)
         # Copy block to gpuint
         copyto!(gpuint_ptca, blk)
 

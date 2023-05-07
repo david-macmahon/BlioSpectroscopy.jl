@@ -4,7 +4,7 @@ using DataFrames: DataFrame
 using Statistics: std
 
 """
-    upchan_extract_guppiraw(globpattern, DIR; cchan, fchan, nfchan=32, sideband=:native) -> (grh, data)
+    upchan_extract_guppiraw(globpattern, DIR; cchan, fchan, nfchan=32, sideband=:native, pbkwargs...) -> (grh, data)
 
 For all files in `DIR` matching `globpattern`, use CUDA to up-channelize coarse
 channel `cchan` of 3- or 4-dimensional GUPPI RAW data blocks along the time
@@ -27,10 +27,14 @@ the returned GuppiRaw.Header object (i.e. `:chan_bw` and `:obsbw`) will be
 updated.
 
 This function returns `nothing` if no files in `DIR` match or a
-`(GuppiRaw::Header, Array{Complex{Int8}})`` tuple if one or more files id `DIR`
+`(GuppiRaw::Header, Array{Complex{Int8}})`` tuple if one or more files in `DIR`
 match.
+
+`pbkwargs` are passed through to ProgressBar.  This can useful in notebooks
+where the progress bar may be unwanted (e.g. by passing
+`output_stream=devnull`).
 """
-function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nfchan=32, sideband=:native)
+function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nfchan=32, sideband=:native, pbkwargs...)
     # Get the list of RAW file names
     rawnames = sort(glob(globpattern, DIR))
     if isempty(rawnames)
@@ -42,7 +46,7 @@ function upchan_extract_guppiraw(globpattern, DIR=getrawroot(); cchan, fchan, nf
 
     grh = GuppiRaw.Header(hdrs[1,:])
     # upchan_extract returns an Array dimensioned: `(time, chan, ant, pol)`
-    vv_tcap = upchan_extract(blks; cchan, fchan, nfchan)
+    vv_tcap = upchan_extract(blks; cchan, fchan, nfchan, pbkwargs...)
 
     # Requantize vv from Complex{Float32} to Complex{Int8}
     vvi8_tcap = requantize_to_i8(vv_tcap)
