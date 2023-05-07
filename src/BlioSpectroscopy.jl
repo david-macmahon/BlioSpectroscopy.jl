@@ -8,10 +8,6 @@ module BlioSpectroscopy
     export chanspan
     include("chanspan.jl")
 
-    export getrawroot, geth5root, getcudadev, getsitedesc
-    export setrawroot, seth5root, setcudadev, setsitedesc
-    include("preferences.jl")
-
     export spectroscopy
     include("spectroscopy.jl")
     
