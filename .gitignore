@@ -1,5 +1,3 @@
 .vscode
-/*.png
 /LocalPreferences.toml
 /Manifest.toml
-notebooks/*.html
