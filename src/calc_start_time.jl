@@ -12,8 +12,15 @@ Commonly used types for `hdr` would be GuppiRaw.Header or DataFrameRow, but
 `Dict{Symbol,Any}` and `NamedTuple` can be used as well.
 """
 function calc_start_time(hdr)
-    secperblk=hdr[:tbin] * getntime(hdr)
-    secperpktidx = secperblk / hdr[:piperblk]
-    hdr[:synctime] + hdr[:pktidx] * secperpktidx
+    if all(haskey.(Ref(hdr), (:tbin, :piperblk, :synctime, :pktidx)))
+        secperblk=hdr[:tbin] * getntime(hdr)
+        secperpktidx = secperblk / hdr[:piperblk]
+        hdr[:synctime] + hdr[:pktidx] * secperpktidx
+    elseif all(haskey.(Ref(hdr), (:stt_imjd, :stt_smjd)))
+        mjd1970 = 40587
+        (hdr[:stt_imjd]-mjd1970) * (24*60*60) + hdr[:stt_smjd]
+    else
+        error("unable to calculate start time")
+    end
 end
 
