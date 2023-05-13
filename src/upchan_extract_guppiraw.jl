@@ -1,4 +1,4 @@
-using Blio: GuppiRaw
+using Blio.GuppiRaw
 using Statistics: std
 
 """
