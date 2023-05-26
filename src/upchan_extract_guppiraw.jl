@@ -36,7 +36,7 @@ function upchan_extract_guppiraw(hdr1, blks; cchan, fchan, nfchan=32, sideband=:
     vvi8_ptca = permutedims(vvi8_tcap, (4,1,2,3))
 
     # Gather relevant metadata
-    nfpc = size(blks[1], 2)
+    nfpc = size(first(blks), 2)
     grh = GuppiRaw.Header(hdr1)
     cfreqs = collect(Iterators.partition(calc_upchan_freqs(grh, nfpc), nfpc))
     ffreqs = cfreqs[cchan][chanspan(fchan, nfchan)]

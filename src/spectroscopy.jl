@@ -22,11 +22,7 @@ integrations.  Note that `nfine == ntime` and `nint` is the time axis of the
 output data.
 """
 function spectroscopy(blks; nint=32)
-    np = size(blks[1], 1)
-    nt = size(blks[1], 2)
-    nc = size(blks[1], 3)
-    na = ndims(blks[1]) < 4 ? 1 : size(blks[1], 4)
-
+    np, nt, nc, na = size.(Ref(first(blks)), (1,2,3,4))
     ni = length(blks) ÷ nint
     gpuint = CuArray{Complex{Int8}}(undef, np, nt, nc, na)
     fftin = CuArray{ComplexF32}(undef, nt, nc, na, np)

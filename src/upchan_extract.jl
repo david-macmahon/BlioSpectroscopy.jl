@@ -16,10 +16,7 @@ input block), `nant` is the number of antennas, and `npol` is the number of
 polarizations.
 """
 function upchan_extract(blks; cchan, fchan, nfchan=32)
-    np = size(blks[1], 1)
-    nt = size(blks[1], 2)
-    nc = size(blks[1], 3)
-    na = ndims(blks[1]) < 4 ? 1 : size(blks[1], 4)
+    np, nt, nc, na = size.(Ref(first(blks)), (1,2,3,4))
     nb = length(blks)
     # _ptca indicates (pol, time, chan, ant) indexing
     gpuint_ptca = CuArray{Complex{Int8}}(undef, np, nt, nc, na)
