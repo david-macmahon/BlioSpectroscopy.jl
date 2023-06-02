@@ -10,6 +10,9 @@ module BlioSpectroscopy
 
     export spectroscopy
     include("spectroscopy.jl")
+
+    export spectrokurtosoid, kurtosis, incokurtosis, kurtosismap
+    include("spectrokurtosoid.jl")
     
     export upchan_extract_guppiraw, write_raw_file
     include("upchan_extract_guppiraw.jl")
