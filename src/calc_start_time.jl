@@ -1,4 +1,4 @@
-using Blio: GuppiRaw.getntime
+using Blio.GuppiRaw: getntime
 
 export calc_start_time
 
