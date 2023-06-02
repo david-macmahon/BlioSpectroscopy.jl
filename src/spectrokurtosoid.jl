@@ -1,6 +1,8 @@
 using CUDA
 using CUDA.CUFFT
 using LinearAlgebra: mul!
+using DataFrames: DataFrame
+
 import StatsBase: kurtosis
 
 """
@@ -229,4 +231,43 @@ function kurtosismap(ks; fdim=1, klim=3, maxgap=64)
         dc[k] = (v, clusterize(v; maxgap))
     end
     return dc
+end
+
+# Maybe someday `kmap2df` will be an extension, but for now we take on
+# DataFrames as a direct dependency.
+
+"""
+    kmap2df(kmap, names::NTuple{N,Symbol}) -> DataFrame
+
+Create a DataFrame from kurtosis map `kmap` (as returned by `kurtosismap`).  The
+names given in `names` will be used as the names of the DataFrame columns
+corresponding to the elements of each key of `kmap`.  Each entry in `kmap` will
+produce one DataFrame row per cluster.  The following additional columns are
+also populated:
+- `:first` First fine channel of cluster
+- `:last` Last fine channel of cluster
+- `:center` Center fine channel of cluster
+- `:span` Number of fine channels in cluster
+- `:nhits` Number of fine channels in cluster with kurtosis over threshold
+- `:cluster` Number of cluster within the kurtosis map element
+These names are reserved and `names` must not contain any of them.
+"""
+function kmap2df(kmap, names::NTuple{N,Symbol}) where {N}
+    ks = keys(kmap)
+    @assert all(length.(ks) .== length(names)) "too many/few names"
+    for name in (:first, :last, :center, :span, :nhits, :cluster)
+        @assert !(name in names) ":$name is a reserved name"
+    end
+    df = DataFrame(fill(Int[], length(names)+6),
+                   [names..., :first, :last, :center, :span, :nhits, :cluster])
+    for k in ks
+        fchans, clusters = kmap[k]
+        for c in unique(clusters)
+            clusterfchans = fchans[clusters .== c]
+            f, l = extrema(clusterfchans)
+            n = length(clusterfchans)
+            push!(df, (k..., f, l, centerspan(f,l)..., n, c))
+        end
+    end
+    sort!(df)
 end
