@@ -5,7 +5,7 @@ module BlioSpectroscopy
     export calc_upchan_freqs
     include("calc_upchan_freqs.jl")
 
-    export chanspan
+    export centerspan, chanspan
     include("chanspan.jl")
 
     export spectroscopy
