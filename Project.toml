@@ -1,7 +1,7 @@
 name = "BlioSpectroscopy"
 uuid = "6e31318f-3d89-4707-97ff-aaba23e5678c"
 authors = ["David MacMahon <davidm@astro.berkeley.edu>"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 Blio = "87855aa7-8b24-49b4-b316-97c011f78d17"
